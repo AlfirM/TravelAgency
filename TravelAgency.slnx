@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".dockerignore" />
+    <File Path="docker-compose.yaml" />
+  </Folder>
+  <Project Path="TravelAgency.BookingService/TravelAgency.BookingService.csproj" />
+  <Project Path="TravelAgency.Contracts/TravelAgency.Contracts.csproj" />
+  <Project Path="TravelAgency.NotificationService/TravelAgency.NotificationService.csproj" />
+  <Project Path="TravelAgency.PaymentService/TravelAgency.PaymentService.csproj" />
+</Solution>

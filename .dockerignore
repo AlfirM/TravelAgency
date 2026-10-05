@@ -1,0 +1,11 @@
+# .dockerignore
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/.git/
+**/*.user
+**/node_modules/
+*.md
+docker-compose*.yml
+.dockerignore

@@ -1,0 +1,69 @@
+# docker-compose.yml
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: travel-rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - travel-network
+
+  booking-service:
+    build:
+      # Контекст — корень решения, чтобы был доступ к TravelAgency.Contracts
+      context: .
+      dockerfile: TravelAgency.BookingService/Dockerfile
+    container_name: travel-booking-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RabbitMq__Host=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5001:8080"
+    networks:
+      - travel-network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: TravelAgency.PaymentService/Dockerfile
+    container_name: travel-payment-service
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - RabbitMq__Host=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - travel-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: TravelAgency.NotificationService/Dockerfile
+    container_name: travel-notification-service
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - RabbitMq__Host=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - travel-network
+
+networks:
+  travel-network:
+    driver: bridge
