@@ -1,6 +1,28 @@
 # docker-compose.yml
-
 services:
+  # PostgreSQL
+  postgres:
+    image: postgres:17-alpine
+    container_name: travel-postgres
+    hostname: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: travelagency
+      POSTGRES_USER: traveluser
+      POSTGRES_PASSWORD: travelpass
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traveluser -d travelagency"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - travel-network
+
+  # RabbitMQ
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: travel-rabbitmq
@@ -19,23 +41,27 @@ services:
     networks:
       - travel-network
 
+  # Booking Service
   booking-service:
     build:
-      # Контекст — корень решения, чтобы был доступ к TravelAgency.Contracts
       context: .
       dockerfile: TravelAgency.BookingService/Dockerfile
     container_name: travel-booking-service
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - RabbitMq__Host=rabbitmq
+      - ConnectionStrings__Postgres=Host=postgres;Port=5432;Database=travelagency;Username=traveluser;Password=travelpass
     depends_on:
       rabbitmq:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     ports:
       - "5001:8080"
     networks:
       - travel-network
 
+  # Payment Service
   payment-service:
     build:
       context: .
@@ -44,12 +70,16 @@ services:
     environment:
       - DOTNET_ENVIRONMENT=Development
       - RabbitMq__Host=rabbitmq
+      - ConnectionStrings__Postgres=Host=postgres;Port=5432;Database=travelagency;Username=traveluser;Password=travelpass
     depends_on:
       rabbitmq:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - travel-network
 
+  # Notification Service
   notification-service:
     build:
       context: .
@@ -58,11 +88,17 @@ services:
     environment:
       - DOTNET_ENVIRONMENT=Development
       - RabbitMq__Host=rabbitmq
+      - ConnectionStrings__Postgres=Host=postgres;Port=5432;Database=travelagency;Username=traveluser;Password=travelpass
     depends_on:
       rabbitmq:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - travel-network
+
+volumes:
+  postgres_data:
 
 networks:
   travel-network:

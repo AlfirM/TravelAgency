@@ -1,15 +1,24 @@
-// TravelAgency.PaymentService/Program.cs
 using MassTransit;
-using TravelAgency.Contracts.Data;
+using Microsoft.EntityFrameworkCore;
+using TravelAgency.PaymentService;
+using TravelAgency.PaymentService.Consumers;
+using TravelAgency.PaymentService.Managers;
+using TravelAgency.PaymentService.Managers.Contracts;
+using TravelAgency.PaymentService.Repository;
+using TravelAgency.PaymentService.Repository.Contracts;
+using TravelAgency.PaymentService.Managers;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// 1. Регистрируем MassTransit и потребителя
+builder.Services.AddDbContext<PaymentDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
+
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentManager, PaymentManager>();
+
 builder.Services.AddMassTransit(x =>
 {
-    // Добавляем потребителя — MassTransit автоматически зарегистрирует его в DI
     x.AddConsumer<BookingPlacedConsumer>();
-
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "localhost", "/", h =>
@@ -17,38 +26,15 @@ builder.Services.AddMassTransit(x =>
             h.Username("guest");
             h.Password("guest");
         });
-
-        // MassTransit сам создаст очередь для потребителя.
-        // Например, очередь "payment-service" по правилам форматирования по умолчанию
         cfg.ConfigureEndpoints(context);
     });
 });
 
 var host = builder.Build();
-await host.RunAsync();
 
-// 2. Логика потребителя
-public class BookingPlacedConsumer : IConsumer<BookingPlaced>
+using (var scope = host.Services.CreateScope())
 {
-    private readonly ILogger<BookingPlacedConsumer> _logger;
-
-    public BookingPlacedConsumer(ILogger<BookingPlacedConsumer> logger)
-    {
-        _logger = logger;
-    }
-
-    public async Task Consume(ConsumeContext<BookingPlaced> context)
-    {
-        var message = context.Message;
-
-        _logger.LogInformation("Получено событие бронирования: {BookingId}. Обрабатываю оплату...", message.BookingId);
-
-        // Имитация обработки платежа
-        await Task.Delay(2000);
-
-        _logger.LogInformation("Оплата обработана: {BookingId}, сумма: {Price}", message.BookingId, message.Price);
-
-        // В реальном приложении здесь вы бы опубликовали событие PaymentCompleted
-        // Для демонстрации мы просто логируем
-    }
+    scope.ServiceProvider.GetRequiredService<PaymentDbContext>().Database.EnsureCreated();
 }
+
+await host.RunAsync();

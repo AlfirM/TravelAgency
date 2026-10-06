@@ -1,13 +1,25 @@
-// TravelAgency.NotificationService/Program.cs
 using MassTransit;
-using TravelAgency.Contracts.Data;
+using MassTransit.SqlTransport;
+using Microsoft.EntityFrameworkCore;
+using TravelAgency.NotificationService;
+using TravelAgency.NotificationService.Consumers;
+using TravelAgency.NotificationService.Managers;
+using TravelAgency.NotificationService.Managers.Contracts;
+using TravelAgency.NotificationService.Repository;
+using TravelAgency.NotificationService.Repository.Contracts;
+using TravelAgency.NotificationService.Managers;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddDbContext<NotificationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
+
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<INotificationManager, NotificationManager>();
 
 builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<BookingPlacedNotificationConsumer>();
-
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "localhost", "/", h =>
@@ -20,25 +32,10 @@ builder.Services.AddMassTransit(x =>
 });
 
 var host = builder.Build();
-await host.RunAsync();
 
-public class BookingPlacedNotificationConsumer : IConsumer<BookingPlaced>
+using (var scope = host.Services.CreateScope())
 {
-    private readonly ILogger<BookingPlacedNotificationConsumer> _logger;
-
-    public BookingPlacedNotificationConsumer(ILogger<BookingPlacedNotificationConsumer> logger)
-    {
-        _logger = logger;
-    }
-
-    public async Task Consume(ConsumeContext<BookingPlaced> context)
-    {
-        var message = context.Message;
-        _logger.LogInformation("Получено событие бронирования: {BookingId}. Отправляю письмо-подтверждение клиенту {CustomerName}...", message.BookingId, message.CustomerName);
-
-        // Имитация отправки письма
-        await Task.Delay(1000);
-
-        _logger.LogInformation("Письмо отправлено: {CustomerName}, направление: {Destination}", message.CustomerName, message.Destination);
-    }
+    scope.ServiceProvider.GetRequiredService<NotificationDbContext>().Database.EnsureCreated();
 }
+
+await host.RunAsync();

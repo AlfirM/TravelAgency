@@ -1,48 +1,55 @@
-// TravelAgency.BookingService/Program.cs
 using MassTransit;
-using TravelAgency.Contracts.Data;
+using Microsoft.EntityFrameworkCore;
+using TravelAgency.BookingService;
+using TravelAgency.BookingService.Managers;
+using TravelAgency.BookingService.Managers.Contracts;
+using TravelAgency.BookingService.Repository;
+using TravelAgency.BookingService.Repository.Contracts;
+using TravelAgency.BookingService.Managers;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Регистрируем MassTransit и настраиваем RabbitMQ
+builder.Services.AddDbContext<BookingDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
+
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IBookingManager, BookingManager>();
+
 builder.Services.AddMassTransit(x =>
 {
     x.UsingRabbitMq((context, cfg) =>
     {
-        // Адрес RabbitMQ.
-        // В Docker-окружении имя хоста — это имя сервиса "rabbitmq"
         cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "localhost", "/", h =>
         {
             h.Username("guest");
             h.Password("guest");
         });
-
-        // MassTransit сам создаст очереди для потребителей
         cfg.ConfigureEndpoints(context);
     });
 });
 
 var app = builder.Build();
 
-// 2. Определяем API-эндпоинт
-app.MapPost("/api/bookings", async (BookingRequest request, IPublishEndpoint publishEndpoint) =>
+using (var scope = app.Services.CreateScope())
 {
-    // Имитация сохранения бронирования в БД (опущено)
-    var bookingId = Guid.NewGuid();
+    scope.ServiceProvider.GetRequiredService<BookingDbContext>().Database.EnsureCreated();
+}
 
-    // 3. Публикуем событие в RabbitMQ
-    await publishEndpoint.Publish(new BookingPlaced
-    {
-        BookingId = bookingId,
-        CustomerName = request.CustomerName,
-        Destination = request.Destination,
-        Price = request.Price
-    });
-
-    return Results.Ok(new { Message = "Бронирование принято, обрабатывается.", BookingId = bookingId });
+app.MapPost("/api/bookings", async (BookingRequest request, IBookingManager manager) =>
+{
+    var booking = await manager.CreateBookingAsync(request.CustomerName, request.Destination, request.Price);
+    return Results.Ok(new { Message = "Бронирование принято.", BookingId = booking.Id });
 });
+
+app.MapGet("/api/bookings/{id}", async (Guid id, IBookingManager manager) =>
+{
+    var booking = await manager.GetBookingAsync(id);
+    return booking is null ? Results.NotFound() : Results.Ok(booking);
+});
+
+app.MapGet("/api/bookings", async (IBookingManager manager) =>
+    Results.Ok(await manager.GetAllBookingsAsync()));
 
 app.Run();
 
-// Простая модель запроса
 public record BookingRequest(string CustomerName, string Destination, decimal Price);
