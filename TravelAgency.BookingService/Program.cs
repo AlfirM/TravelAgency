@@ -23,10 +23,13 @@ builder.Services.AddScoped<IBookingEventPublisher, BookingEventPublisher>();
 
 builder.Services.AddMassTransit(x =>
 {
+    // Включаем Transactional Outbox на базе EF Core
     x.AddEntityFrameworkOutbox<BookingDbContext>(o =>
     {
-        o.UsePostgres();
-        o.UseBusOutbox();
+        o.UsePostgres();          // диалект SQL для outbox-таблиц
+        o.UseBusOutbox();         // публикация идёт через outbox, а не напрямую
+        o.QueryDelay = TimeSpan.FromSeconds(1);      // как часто проверять outbox
+        o.DuplicateDetectionWindow = TimeSpan.FromMinutes(10);
     });
 
     x.UsingRabbitMq((context, cfg) =>
@@ -54,5 +57,4 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-
 app.Run();

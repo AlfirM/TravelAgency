@@ -6,7 +6,6 @@ using TravelAgency.PaymentService.Managers;
 using TravelAgency.PaymentService.Managers.Contracts;
 using TravelAgency.PaymentService.Repository;
 using TravelAgency.PaymentService.Repository.Contracts;
-using TravelAgency.PaymentService.Managers;
 
 var builder = Host.CreateApplicationBuilder(args);
 

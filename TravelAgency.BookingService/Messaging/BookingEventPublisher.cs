@@ -21,26 +21,25 @@ namespace TravelAgency.BookingService.Messaging
 
         public async Task PublishBookingPlacedAsync(BookingEntity booking, CancellationToken ct = default)
         {
-            var message = new BookingPlaced
+            await _publishEndpoint.Publish(new BookingPlaced
             {
                 BookingId = booking.Id,
                 CustomerName = booking.CustomerName,
                 Destination = booking.Destination,
                 Price = booking.Price,
                 BookingDate = booking.BookingDate
-            };
+            }, ct);
 
-            await _publishEndpoint.Publish(message, ct);
-            _logger.LogInformation("Опубликовано событие BookingPlaced для {BookingId}", booking.Id);
+            _logger.LogInformation(
+                "BookingPlaced для {BookingId} поставлено в outbox", booking.Id);
         }
 
         public async Task PublishBookingStatusChangedAsync(Guid bookingId, string status, CancellationToken ct = default)
         {
-            // Пока контракта BookingStatusChanged нет — логируем.
-            // Когда появится — добавите record в Contracts и опубликуете здесь.
+            // Когда появится контракт BookingStatusChanged — опубликуете здесь.
             await Task.CompletedTask;
             _logger.LogInformation(
-                "Статус бронирования {BookingId} изменён на {Status} (событие не публикуется — контракт отсутствует)",
+                "Статус {BookingId} изменён на {Status} (контракт события пока не определён)",
                 bookingId, status);
         }
     }

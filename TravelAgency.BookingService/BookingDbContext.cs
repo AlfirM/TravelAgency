@@ -1,5 +1,7 @@
-﻿using MassTransit;
+﻿// TravelAgency.BookingService/Data/BookingDbContext.cs
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using TravelAgency.Contracts;
 using TravelAgency.Contracts.Entity;
 
 namespace TravelAgency.BookingService
@@ -7,6 +9,7 @@ namespace TravelAgency.BookingService
     public class BookingDbContext : DbContext
     {
         public BookingDbContext(DbContextOptions<BookingDbContext> options) : base(options) { }
+
         public DbSet<BookingEntity> Bookings => Set<BookingEntity>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

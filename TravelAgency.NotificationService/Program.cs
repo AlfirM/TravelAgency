@@ -7,7 +7,6 @@ using TravelAgency.NotificationService.Managers;
 using TravelAgency.NotificationService.Managers.Contracts;
 using TravelAgency.NotificationService.Repository;
 using TravelAgency.NotificationService.Repository.Contracts;
-using TravelAgency.NotificationService.Managers;
 
 var builder = Host.CreateApplicationBuilder(args);
 
