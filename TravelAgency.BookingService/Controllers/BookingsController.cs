@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TravelAgency.BookingService.Managers.Contracts;
 using TravelAgency.BookingService.Models;
-using TravelAgency.BookingService.Services;
 
 namespace TravelAgency.BookingService.Controllers
 {
