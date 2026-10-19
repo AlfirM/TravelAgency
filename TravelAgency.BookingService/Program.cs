@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TravelAgency.BookingService;
 using TravelAgency.BookingService.Managers;
 using TravelAgency.BookingService.Managers.Contracts;
+using TravelAgency.BookingService.Messaging;
 using TravelAgency.BookingService.Repository;
 using TravelAgency.BookingService.Repository.Contracts;
 
@@ -18,9 +19,16 @@ builder.Services.AddDbContext<BookingDbContext>(options =>
 
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IBookingManager, BookingManager>();
+builder.Services.AddScoped<IBookingEventPublisher, BookingEventPublisher>();
 
 builder.Services.AddMassTransit(x =>
 {
+    x.AddEntityFrameworkOutbox<BookingDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "localhost", "/", h =>

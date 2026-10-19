@@ -1,7 +1,5 @@
-﻿using MassTransit;
-using TravelAgency.BookingService.Managers.Contracts;
+﻿using TravelAgency.BookingService.Managers.Contracts;
 using TravelAgency.BookingService.Repository.Contracts;
-using TravelAgency.Contracts.Data;
 using TravelAgency.Contracts.Entity;
 
 namespace TravelAgency.BookingService.Managers;
@@ -9,16 +7,11 @@ namespace TravelAgency.BookingService.Managers;
 public class BookingManager : IBookingManager
 {
     private readonly IBookingRepository _repository;
-    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<BookingManager> _logger;
 
-    public BookingManager(
-        IBookingRepository repository,
-        IPublishEndpoint publishEndpoint,
-        ILogger<BookingManager> logger)
+    public BookingManager(IBookingRepository repository, ILogger<BookingManager> logger)
     {
         _repository = repository;
-        _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
 
@@ -35,16 +28,7 @@ public class BookingManager : IBookingManager
         };
 
         await _repository.AddAsync(booking, ct);
-        _logger.LogInformation("Бронирование создано: {BookingId}", booking.Id);
-
-        await _publishEndpoint.Publish(new BookingPlaced
-        {
-            BookingId = booking.Id,
-            CustomerName = booking.CustomerName,
-            Destination = booking.Destination,
-            Price = booking.Price
-        }, ct);
-
+        _logger.LogInformation("Бронирование сохранено: {BookingId}", booking.Id);
         return booking;
     }
 
@@ -54,16 +38,18 @@ public class BookingManager : IBookingManager
     public Task<IReadOnlyList<BookingEntity>> GetAllBookingsAsync(CancellationToken ct = default)
         => _repository.GetAllAsync(ct);
 
-    public async Task UpdateStatusAsync(Guid bookingId, string status, CancellationToken ct = default)
+    public async Task<bool> UpdateStatusAsync(Guid bookingId, string status, CancellationToken ct = default)
     {
         var booking = await _repository.GetByIdAsync(bookingId, ct);
         if (booking is null)
         {
             _logger.LogWarning("Бронирование {BookingId} не найдено", bookingId);
-            return;
+            return false;
         }
 
         booking.Status = status;
         await _repository.UpdateAsync(booking, ct);
+        _logger.LogInformation("Статус {BookingId} изменён на {Status}", bookingId, status);
+        return true;
     }
 }

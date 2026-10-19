@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using TravelAgency.Contracts.Entity;
 
 namespace TravelAgency.BookingService
@@ -16,6 +17,10 @@ namespace TravelAgency.BookingService
                 e.HasKey(x => x.Id);
                 e.Property(x => x.Price).HasPrecision(18, 2);
             });
+
+            modelBuilder.AddInboxStateEntity();
+            modelBuilder.AddOutboxMessageEntity();
+            modelBuilder.AddOutboxStateEntity();
         }
     }
 }
