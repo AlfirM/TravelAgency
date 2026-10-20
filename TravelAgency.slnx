@@ -7,4 +7,5 @@
   <Project Path="TravelAgency.Contracts/TravelAgency.Contracts.csproj" />
   <Project Path="TravelAgency.NotificationService/TravelAgency.NotificationService.csproj" />
   <Project Path="TravelAgency.PaymentService/TravelAgency.PaymentService.csproj" />
+  <Project Path="TravelAgency.Tests/TravelAgency.Tests.csproj" />
 </Solution>
